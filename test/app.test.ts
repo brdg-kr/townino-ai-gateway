@@ -19,6 +19,9 @@ test("health endpoint is public", async () => {
   assert.equal(body.ok, true);
   assert.equal(body.service, "townino-ai-gateway");
   assert.equal(body.model, "gpt-image-2");
+  assert.equal(body.outputFormat, "jpeg");
+  assert.equal(body.quality, "medium");
+  assert.equal(body.size, "1536x1024");
 });
 
 test("protected routes require a bearer token", async () => {
@@ -70,9 +73,10 @@ test("menu photo edit returns generated image data from the injected editor", as
         assert.equal(input.model, "gpt-image-2");
         assert.equal(input.outputFormat, "jpeg");
         assert.equal(input.quality, "medium");
+        assert.equal(input.size, "1536x1024");
         return {
-          model: input.model ?? "gpt-image-2",
-          outputFormat: "jpeg",
+          model: input.model,
+          outputFormat: input.outputFormat,
           contentType: "image/jpeg",
           dataUrl: "data:image/jpeg;base64,ZmFrZS1pbWFnZQ==",
         };
@@ -90,6 +94,9 @@ test("menu photo edit returns generated image data from the injected editor", as
       prompt:
         "Create a clean official restaurant menu photo while preserving the dish identity.",
       image: { dataUrl: sourceDataUrl },
+      outputFormat: "png",
+      quality: "low",
+      size: "1024x1024",
     }),
   });
   const body = await response.json();

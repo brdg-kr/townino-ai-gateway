@@ -90,6 +90,9 @@ export function createApp(options: CreateAppOptions = {}) {
       service: "townino-ai-gateway",
       environment: config.nodeEnv,
       model: config.imageModel,
+      outputFormat: config.imageOutputFormat,
+      quality: config.imageQuality,
+      size: config.imageSize,
     })
   );
 

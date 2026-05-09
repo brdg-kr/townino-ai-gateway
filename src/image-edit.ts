@@ -14,13 +14,23 @@ const menuPhotoEditSchema = z.object({
   image: z.object({
     dataUrl: imageDataUrlSchema,
   }),
-  outputFormat: z.enum(["jpeg", "png", "webp"]).default("jpeg"),
-  quality: z.enum(["low", "medium", "high", "auto"]).default("medium"),
-  size: z.enum(["1024x1024", "1536x1024", "1024x1536", "auto"]).default("1024x1024"),
+  outputFormat: z.enum(["jpeg", "png", "webp"]).optional(),
+  quality: z.enum(["low", "medium", "high", "auto"]).optional(),
+  size: z.enum(["1024x1024", "1536x1024", "1024x1536", "auto"]).optional(),
   user: z.string().trim().min(1).max(120).optional(),
 });
 
-export type MenuPhotoEditRequest = z.infer<typeof menuPhotoEditSchema>;
+export type MenuPhotoEditRequest = {
+  model: string;
+  prompt: string;
+  image: {
+    dataUrl: string;
+  };
+  outputFormat: typeof config.imageOutputFormat;
+  quality: typeof config.imageQuality;
+  size: typeof config.imageSize;
+  user?: string;
+};
 
 export type MenuPhotoEditResult = {
   model: string;
@@ -72,15 +82,21 @@ function parseDataUrl(dataUrl: string) {
 
 export function parseMenuPhotoEditRequest(payload: unknown) {
   const parsed = menuPhotoEditSchema.parse(payload);
-  const model = parsed.model ?? config.imageModel;
-  if (!config.allowedImageModels.has(model)) {
-    throw new HttpError(400, `Model is not allowed: ${model}`, "model_not_allowed");
+  if (parsed.model && parsed.model !== config.imageModel) {
+    throw new HttpError(400, `Model is not allowed: ${parsed.model}`, "model_not_allowed");
   }
-  return { ...parsed, model };
+  return {
+    prompt: parsed.prompt,
+    image: parsed.image,
+    user: parsed.user,
+    model: config.imageModel,
+    outputFormat: config.imageOutputFormat,
+    quality: config.imageQuality,
+    size: config.imageSize,
+  };
 }
 
 export async function editMenuPhoto(input: MenuPhotoEditRequest): Promise<MenuPhotoEditResult> {
-  const model = input.model ?? config.imageModel;
   const source = parseDataUrl(input.image.dataUrl);
   const sourceFile = await toFile(
     source.body,
@@ -89,7 +105,7 @@ export async function editMenuPhoto(input: MenuPhotoEditRequest): Promise<MenuPh
   );
 
   const response = await openai.images.edit({
-    model,
+    model: input.model,
     image: sourceFile,
     prompt: input.prompt,
     n: 1,
@@ -107,7 +123,7 @@ export async function editMenuPhoto(input: MenuPhotoEditRequest): Promise<MenuPh
 
   const contentType = contentTypeForOutputFormat(input.outputFormat);
   return {
-    model,
+    model: input.model,
     outputFormat: input.outputFormat,
     contentType,
     dataUrl: `data:${contentType};base64,${b64}`,
